@@ -6,22 +6,30 @@ type Player = {
   id: number
   name: string
   score: number
+  thru: number
 }
 
 export default function Home() {
-  const [matchName, setMatchName] = useState('Saturday Match')
+  const [matchName, setMatchName] = useState('Saturday Skins')
   const [joinCode, setJoinCode] = useState('')
-  const [players, setPlayers] = useState<Player[]>([
-    { id: 1, name: 'You', score: -1 },
-    { id: 2, name: 'Jake', score: 0 },
-    { id: 3, name: 'Sam', score: 2 },
-  ])
   const [newPlayerName, setNewPlayerName] = useState('')
+  const [players, setPlayers] = useState<Player[]>([
+    { id: 1, name: 'You', score: -3, thru: 12 },
+    { id: 2, name: 'Jake', score: -1, thru: 11 },
+    { id: 3, name: 'Sam', score: 0, thru: 12 },
+    { id: 4, name: 'Mason', score: 2, thru: 10 },
+  ])
 
   const leaderboard = useMemo(
-    () => [...players].sort((a, b) => a.score - b.score),
+    () => [...players].sort((a, b) => a.score - b.score || b.thru - a.thru),
     [players]
   )
+
+  function formatScore(score: number) {
+    if (score === 0) return 'E'
+    if (score > 0) return `+${score}`
+    return `${score}`
+  }
 
   function createMatch() {
     alert(`Match created: ${matchName}`)
@@ -32,18 +40,18 @@ export default function Home() {
       alert('Enter a join code')
       return
     }
-    alert(`Joining match with code: ${joinCode}`)
+    alert(`Joining match: ${joinCode}`)
   }
 
   function addPlayer() {
     if (!newPlayerName.trim()) return
-
     setPlayers((current) => [
       ...current,
       {
         id: Date.now(),
         name: newPlayerName.trim(),
         score: 0,
+        thru: 1,
       },
     ])
     setNewPlayerName('')
@@ -52,147 +60,120 @@ export default function Home() {
   function changeScore(id: number, amount: number) {
     setPlayers((current) =>
       current.map((player) =>
+        player.id === id ? { ...player, score: player.score + amount } : player
+      )
+    )
+  }
+
+  function advanceHole(id: number) {
+    setPlayers((current) =>
+      current.map((player) =>
         player.id === id
-          ? { ...player, score: player.score + amount }
+          ? { ...player, thru: Math.min(player.thru + 1, 18) }
           : player
       )
     )
   }
 
   return (
-    <main style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
-      <h1 style={{ marginBottom: 8 }}>BGB Live</h1>
-      <p style={{ marginTop: 0, color: '#555' }}>
-        Live golf leaderboard prototype
-      </p>
+    <main className="page-shell">
+      <section className="hero-card">
+        <div>
+          <p className="eyebrow">BGB LIVE</p>
+          <h1>Live Golf Leaderboard</h1>
+          <p className="subtext">
+            Real-time scoring with the broadcast-style golf feel you wanted.
+          </p>
+        </div>
+        <div className="hero-badge">LIVE</div>
+      </section>
 
-      <div style={{ display: 'grid', gap: 16, marginTop: 24 }}>
-        <section style={cardStyle}>
-          <h2>Create Match</h2>
-          <input
-            style={inputStyle}
-            value={matchName}
-            onChange={(e) => setMatchName(e.target.value)}
-            placeholder="Match name"
-          />
-          <button style={buttonStyle} onClick={createMatch}>
-            Create Match
-          </button>
-        </section>
-
-        <section style={cardStyle}>
-          <h2>Join Match</h2>
-          <input
-            style={inputStyle}
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value)}
-            placeholder="Enter join code"
-          />
-          <button style={buttonStyle} onClick={joinMatch}>
-            Join Match
-          </button>
-        </section>
-
-        <section style={cardStyle}>
-          <h2>Add Player</h2>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <input
-              style={{ ...inputStyle, marginBottom: 0, flex: 1, minWidth: 220 }}
-              value={newPlayerName}
-              onChange={(e) => setNewPlayerName(e.target.value)}
-              placeholder="Player name"
-            />
-            <button style={buttonStyle} onClick={addPlayer}>
-              Add
-            </button>
+      <section className="content-grid">
+        <div className="leaderboard-card">
+          <div className="section-header">
+            <div>
+              <p className="eyebrow">LEADERBOARD</p>
+              <h2>{matchName}</h2>
+            </div>
           </div>
-        </section>
 
-        <section style={cardStyle}>
-          <h2>Live Leaderboard</h2>
-          <div style={{ display: 'grid', gap: 12 }}>
+          <div className="leaderboard-table">
+            <div className="leaderboard-head row">
+              <span>POS</span>
+              <span>PLAYER</span>
+              <span>SCORE</span>
+              <span>THRU</span>
+              <span>ACTIONS</span>
+            </div>
+
             {leaderboard.map((player, index) => (
-              <div key={player.id} style={rowStyle}>
-                <div>
-                  <strong>
-                    #{index + 1} {player.name}
-                  </strong>
-                  <div style={{ color: '#666', fontSize: 14 }}>
-                    Score to par: {formatScore(player.score)}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <button style={smallButtonStyle} onClick={() => changeScore(player.id, -1)}>
+              <div className="row leaderboard-row" key={player.id}>
+                <span className="pos">{index + 1}</span>
+                <span className="player-name">{player.name}</span>
+                <span className={`score-pill ${player.score < 0 ? 'under' : player.score > 0 ? 'over' : 'even'}`}>
+                  {formatScore(player.score)}
+                </span>
+                <span className="thru-pill">{player.thru}</span>
+                <div className="action-group">
+                  <button className="mini-btn" onClick={() => changeScore(player.id, -1)}>
                     -
                   </button>
-                  <span style={{ minWidth: 36, textAlign: 'center', fontWeight: 700 }}>
-                    {formatScore(player.score)}
-                  </span>
-                  <button style={smallButtonStyle} onClick={() => changeScore(player.id, 1)}>
+                  <button className="mini-btn" onClick={() => changeScore(player.id, 1)}>
                     +
+                  </button>
+                  <button className="mini-btn green" onClick={() => advanceHole(player.id)}>
+                    Hole+
                   </button>
                 </div>
               </div>
             ))}
           </div>
-        </section>
-      </div>
+        </div>
+
+        <div className="side-panel">
+          <section className="panel-card">
+            <p className="eyebrow">CREATE MATCH</p>
+            <h3>Start a Game</h3>
+            <input
+              className="text-input"
+              value={matchName}
+              onChange={(e) => setMatchName(e.target.value)}
+              placeholder="Match name"
+            />
+            <button className="primary-btn" onClick={createMatch}>
+              Create Match
+            </button>
+          </section>
+
+          <section className="panel-card">
+            <p className="eyebrow">JOIN MATCH</p>
+            <h3>Enter Code</h3>
+            <input
+              className="text-input"
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value)}
+              placeholder="Join code"
+            />
+            <button className="primary-btn" onClick={joinMatch}>
+              Join Match
+            </button>
+          </section>
+
+          <section className="panel-card">
+            <p className="eyebrow">ADD PLAYER</p>
+            <h3>Expand the Group</h3>
+            <input
+              className="text-input"
+              value={newPlayerName}
+              onChange={(e) => setNewPlayerName(e.target.value)}
+              placeholder="Player name"
+            />
+            <button className="primary-btn" onClick={addPlayer}>
+              Add Player
+            </button>
+          </section>
+        </div>
+      </section>
     </main>
   )
-}
-
-function formatScore(score: number) {
-  if (score > 0) return `+${score}`
-  if (score === 0) return 'E'
-  return `${score}`
-}
-
-const cardStyle: React.CSSProperties = {
-  border: '1px solid #ddd',
-  borderRadius: 12,
-  padding: 16,
-  background: '#fff',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-}
-
-const rowStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: 12,
-  padding: 12,
-  border: '1px solid #eee',
-  borderRadius: 10,
-}
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: 12,
-  borderRadius: 10,
-  border: '1px solid #ccc',
-  marginBottom: 12,
-  fontSize: 16,
-  boxSizing: 'border-box',
-}
-
-const buttonStyle: React.CSSProperties = {
-  padding: '12px 16px',
-  borderRadius: 10,
-  border: 'none',
-  background: '#111827',
-  color: '#fff',
-  fontSize: 16,
-  cursor: 'pointer',
-}
-
-const smallButtonStyle: React.CSSProperties = {
-  width: 32,
-  height: 32,
-  borderRadius: 8,
-  border: 'none',
-  background: '#111827',
-  color: '#fff',
-  fontSize: 18,
-  cursor: 'pointer',
 }
